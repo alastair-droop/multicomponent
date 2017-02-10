@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+import argparse
+import zipfile
+import re
+from sys import stderr, exit
+import xml.etree.ElementTree as eTree
+from signal import signal, SIGPIPE, SIG_DFL
+
+# Set the script version number:
+version = '0.1a (2017-02-10)'
+
+# Set up the command line arguments & parse them:
+parser = argparse.ArgumentParser(description = 'Parse out intensity data from the multicomponentdata.xml file')
+parser.add_argument('-v', '--version', action='version', version='%(prog)s {0}'.format(version))
+parser.add_argument(dest='input_file', help='the input EDF file')
+args = parser.parse_args()
+
+# Play nicely with head:
+signal(SIGPIPE, SIG_DFL) 
+
+def error(msg, status=1):
+    print('ERROR: {}'.format(msg), file=stderr)
+    exit(status)
+
+# Open the EDF zip file:
+zip_file = zipfile.ZipFile(args.input_file, mode='r')
+
+# Get the multicomponent file by its name:
+filename_re = re.compile('.*multicomponentdata\\.xml$')
+filename = None
+for f in zip_file.infolist():
+    if filename_re.match(f.filename) != None:
+        filename = f.filename
+        break
+if filename is None: error('multicimponent XML data not present')
+mc_file = zip_file.open(filename, 'r')
+
+# Parse the XML file:
+tree = eTree.parse(mc_file)
+root = tree.getroot()
+
+# Extract the well number:
+well_n = int(root.find('WellCount').text)
+cycle_n = int(root.find('CycleCount').text)
+
+# Extract the dye lists:
+dye_list = {}
+for dyelist in root.findall('DyeData'):
+    well_index = int(dyelist.attrib['WellIndex'])
+    dye_data = dyelist.find('DyeList').text.strip('[]').split(', ')
+    dye_list[well_index] = dye_data
+
+# Extract the signal data:
+signal_data = {}
+for well_signalset in root.findall('SignalData'):
+    well_index = int(well_signalset.attrib['WellIndex'])
+    signal_data[well_index] = {}
+    cycle_datasets = well_signalset.findall('CycleData')
+    for i in range(len(cycle_datasets)):
+        signal_data[well_index][dye_list[well_index][i]] = [float(x) for x in cycle_datasets[i].text.strip('[]').split(', ')]
+
+# Close the ZIP file:
+zip_file.close()
+
+# Print out the data:
+print('well\tcycle\tROX\tFAM')
+for well in range(well_n):
+    for cycle in range(cycle_n):
+        print('{}\t{}\t{:.2f}\t{:.2f}'.format(well + 1, cycle + 1, signal_data[well]['ROX'][cycle], signal_data[well]['FAM'][cycle]))
