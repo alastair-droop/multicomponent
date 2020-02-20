@@ -95,7 +95,7 @@ def process_amp(input_file):
                 rox = float(line_data[9])
                 fam = float(line_data[5]) * rox
                 signal_data[well]['data'][cycle] = {'ROX':rox, 'FAM':fam}
-    except: error('failed to open amplification text file file "{}"'.format(input_file))
+    except: error('failed to open amplification text file "{}"'.format(input_file))
 
     # Convert the well IDs to an index:
     rows = sorted(list(set([signal_data[well]['row'] for well in signal_data.keys()])))
