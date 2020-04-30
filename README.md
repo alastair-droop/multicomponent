@@ -36,6 +36,10 @@ Well target labels can be extracted from EDS files:
 eds-targets <file.eds>
 ~~~
 
+## Funding
+
+This research was supported by the ECMC Network, C318/A15586.
+
 ## Licence
 
 These tools are released under the [GNU General Public License version 3](http://www.gnu.org/licenses/gpl.html).
